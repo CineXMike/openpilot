@@ -28,17 +28,25 @@ static int nooutput_tx_lin_hook(int lin_num, uint8_t *data, int len) {
 static int default_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
   UNUSED(bus_num);
   UNUSED(to_fwd);
-  return -1;
-}
+  int bus_fwd = -1;
 
-const safety_hooks nooutput_hooks = {
-  .init = nooutput_init,
-  .rx = default_rx_hook,
-  .tx = nooutput_tx_hook,
-  .tx_lin = nooutput_tx_lin_hook,
-  .ignition = default_ign_hook,
-  .fwd = default_fwd_hook,
-};
+  switch (bus_num) {
+    case 0:
+      // Forward all traffic from J533 gateway to Extended CAN devices.
+      bus_fwd = 2;
+      break;
+    case 2:
+      // Forward all traffic from Extended CAN devices to J533 gateway.
+      bus_fwd = 0;
+      break;
+    default:
+      // No other buses should be in use; fallback to do-not-forward.
+      bus_fwd = -1;
+      break;
+  }
+
+  return bus_fwd;
+}
 
 // *** all output safety mode ***
 
@@ -58,6 +66,15 @@ static int alloutput_tx_lin_hook(int lin_num, uint8_t *data, int len) {
   UNUSED(len);
   return true;
 }
+
+const safety_hooks nooutput_hooks = {
+  .init = nooutput_init,
+  .rx = default_rx_hook,
+  .tx = alloutput_tx_hook,
+  .tx_lin = nooutput_tx_lin_hook,
+  .ignition = default_ign_hook,
+  .fwd = default_fwd_hook,
+};
 
 const safety_hooks alloutput_hooks = {
   .init = alloutput_init,
