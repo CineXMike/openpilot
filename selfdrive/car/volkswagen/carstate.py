@@ -80,8 +80,8 @@ def get_gateway_can_parser(CP, canbus, networkModel):
     # this function generates lists for signal, messages and initial values
     signals = [
       # sig_name, sig_address, default
-      ("Lenkradwinkel", "Lenkwinkel_1", 0),          # Absolute steering angle
-      ("Lenkradwinkel_Sign", "Lenkwinkel_1", 0),     # Steering angle sign
+      ("Lenkradwinkel", "Lenkwinkel_1", 0),             # Absolute steering angle
+      ("Lenkradwinkel_Sign", "Lenkwinkel_1", 0),        # Steering angle sign
       ("Lenkradwinkel_Geschwindigkeit", "Lenkwinkel_1", 0), # Absolute steering rate
       ("Lenkradwinkel_Geschwindigkeit_S", "Lenkwinkel_1", 0), # Steering rate sign
       ("Radgeschw__VL_4_1", "Bremse_3", 0),             # ABS wheel speed, front left
@@ -90,11 +90,8 @@ def get_gateway_can_parser(CP, canbus, networkModel):
       ("Radgeschw__HR_4_1", "Bremse_3", 0),             # ABS wheel speed, rear right
       ("Giergeschwindigkeit", "Bremse_5", 0),           # Absolute yaw rate
       ("Vorzeichen_der_Giergeschwindigk", "Bremse_5", 0), # Yaw rate sign
-      # ("ZV_FT_offen", "Gateway_72", 0),               # Door open, driver
-      # ("ZV_BT_offen", "Gateway_72", 0),               # Door open, passenger
-      # ("ZV_HFS_offen", "Gateway_72", 0),              # Door open, rear left
-      # ("ZV_HBFS_offen", "Gateway_72", 0),             # Door open, rear right
-      # ("ZV_HD_offen", "Gateway_72", 0),               # Trunk or hatch open
+      ("Fahrertuerkontakt", "Gateway_Komfort_1", 0),    # Door open, driver
+      # Passenger and rear door states don't seem to be available on extended can
       ("Blinker_links_4_1", "Kombi_1", 0),              # Left turn signal on
       ("Blinker_rechts_4_1", "Kombi_1", 0),             # Right turn signal on
       ("Waehlhebelposition__Getriebe_1_", "Getriebe_1", 0), # Transmission gear selector position
@@ -105,14 +102,14 @@ def get_gateway_can_parser(CP, canbus, networkModel):
       ("Bremsdruck", "Bremse_5", 0),                    # Brake pressure applied
       ("Vorzeichen_Bremsdruck", "Bremse_5", 0),         # Brake pressure applied sign (???)
       ("Fahrpedalwert_oder_Drosselklapp", "Motor_1", 0), # Accelerator pedal value
-      #("Driver_Torque", "EPS_1", 0),                    # Absolute driver torque input
-      #("Driver_Torque_Sign", "EPS_1", 0),               # Driver torque input sign
+      ("Driver_Torque", "EPS_1", 0),                    # Absolute driver torque input
+      ("Driver_Torque_Sign", "EPS_1", 0),               # Driver torque input sign
       # ("HCA_Ready", "EPS_01", 0),                     # Steering rack HCA support configured
       ("ESP_Passiv_getastet", "Bremse_1", 0),           # Stability control disabled
-      # ("KBI_MFA_v_Einheit_02", "Einheiten_01", 0),    # MPH vs KMH speed display
-      ("Bremsinfo", "Kombi_1", 0),                     # Manual handbrake applied
+      ("MFA_v_Einheit_02", "Einheiten_1", 0),           # MPH vs KMH speed display
+      ("Bremsinfo", "Kombi_1", 0),                      # Manual handbrake applied
       # ("TSK_Fahrzeugmasse_02", "Motor_16", 0),        # Estimated vehicle mass from drivetrain coordinator
-      ("Soll_Geschwindigkeit_bei_GRA_Be", "Motor_2", 0), # ACC speed setpoint from ECU??? check this
+      ("GRA_Status", "Motor_2", 0),                     # ACC engagement status
       ("Hauptschalter", "GRA_neu", 0),                  # ACC button, on/off
       ("Abbrechen", "GRA_neu", 0),                      # ACC button, cancel
       ("Setzen", "GRA_neu", 0),                         # ACC button, set
@@ -127,18 +124,17 @@ def get_gateway_can_parser(CP, canbus, networkModel):
 
     checks = [
       # sig_address, frequency
-      # FIXME: need to look up and update all message frequencies
-      ("Lenkwinkel_1", 1),   # From J500 Steering Assist with integrated sensors
-      ("Bremse_3", 1),          # From J104 ABS/ESP controller
-      ("Bremse_5", 1),          # From J104 ABS/ESP controller
-      ("Kombi_1", 1),           # From J285 Instrument cluster
-      ("Getriebe_1", 1),        # From J743 Auto transmission control module
-      ("Airbag_1", 1),          # From J234 Airbag control module
-      ("Motor_2", 1),           # From J623 Engine control module
-      #("EPS_1", 1),             # From J500 Steering Assist with integrated sensors
-      ("GRA_neu", 1),           # From J??? steering wheel control buttons
-      ("Systeminfo_1", 1),      # From J??? not known if gateway, cluster, or BCM
-
+      ("Bremse_3", 100),        # From J104 ABS/ESP controller
+      ("Bremse_5", 50),         # From J104 ABS/ESP controller
+      ("EPS_1", 100),           # From J500 Steering Assist with integrated sensors
+      ("Getriebe_1", 100),      # From J743 Auto transmission control module
+      ("Lenkwinkel_1", 100),    # From J500 Steering Assist with integrated sensors
+      ("Airbag_1", 50),         # From J234 Airbag control module
+      ("GRA_neu", 50),          # From J??? steering wheel control buttons
+      ("Kombi_1", 50),          # From J285 Instrument cluster
+      ("Motor_2", 50),          # From J623 Engine control module
+      ("Systeminfo_1", 10),     # From J??? not known if gateway, cluster, or BCM
+      ("Einheiten_1", 1),       # From ???
     ]
 
   else:
@@ -164,9 +160,13 @@ def get_extended_can_parser(CP, canbus, networkModel):
     ]
 
   elif networkModel == NETWORK_MODEL.PQ:
-    # Nothing known that we need off extended CAN at this time.
-    signals = []
-    checks = []
+    signals = [
+      ("GRA_Set_Speed", "ACC_XX02", 0),                 # ACC cruise set point from J428 ACC radar
+    ]
+
+    checks = [
+      ("ACC_XX02", 50),         # From J428 ACC radar control module
+    ]
 
   else:
     signals = []
@@ -195,7 +195,7 @@ class CarState():
       self.shifter_values = self.can_define.dv["Getriebe_11"]['GE_Fahrstufe']
       self.update = self.update_mqb
     elif networkModel == NETWORK_MODEL.PQ:
-      #self.shifter_values = self.can_define.dv["Getriebe_1"]['Waehlhebelposition__Getriebe_1_']
+      self.shifter_values = self.can_define.dv["Getriebe_1"]['Waehlhebelposition__Getriebe_1_']
       self.update = self.update_pq
 
     self.buttonStates = BUTTON_STATES.copy()
@@ -347,8 +347,7 @@ class CarState():
     # the sign/direction in a separate signal so they must be recombined.
     self.steeringAngle = gw_cp.vl["Lenkwinkel_1"]['Lenkradwinkel'] * (1,-1)[int(gw_cp.vl["Lenkwinkel_1"]['Lenkradwinkel_Sign'])]
     self.steeringRate = gw_cp.vl["Lenkwinkel_1"]['Lenkradwinkel_Geschwindigkeit'] * (1,-1)[int(gw_cp.vl["Lenkwinkel_1"]['Lenkradwinkel_Geschwindigkeit_S'])]
-    #self.steeringTorque = gw_cp.vl["EPS_1"]['Driver_Torque'] * (1,-1)[int(gw_cp.vl["EPS_1"]['Driver_Torque_Sign'])]
-    self.steeringTorque = 0
+    self.steeringTorque = gw_cp.vl["EPS_1"]['Driver_Torque'] * (1,-1)[int(gw_cp.vl["EPS_1"]['Driver_Torque_Sign'])]
     self.steeringPressed = abs(self.steeringTorque) > CarControllerParams.STEER_DRIVER_ALLOWANCE
     self.yawRate = gw_cp.vl["Bremse_5"]['Giergeschwindigkeit'] * (1,-1)[int(gw_cp.vl["Bremse_5"]['Vorzeichen_der_Giergeschwindigk'])] * CV.DEG_TO_RAD
 
@@ -362,56 +361,37 @@ class CarState():
     # Update gear and/or clutch position data based on transmission type.
     if transType == TRANS.automatic:
       self.clutchPressed = False
-      detectedGear = "D"
-      #detectedGear = gw_cp.vl["Getriebe_1"]['Waehlhebelposition__Getriebe_1_']
+      detectedGear = gw_cp.vl["Getriebe_1"]['Waehlhebelposition__Getriebe_1_']
     # FIXME: Need to find some more signals to do manual trans on PQ
     else:
       detectedGear = None
-    #self.gearShifter = parse_gear_shifter(detectedGear, self.shifter_values)
-    self.gearShifter = GEAR.drive
+    self.gearShifter = parse_gear_shifter(detectedGear, self.shifter_values)
 
     # Update door and trunk/hatch lid open status.
-    # FIXME: Need a DBC update for this based on recently learned info
-    self.doorOpen = False
+    self.doorOpen = bool(gw_cp.vl["Gateway_Komfort_1"]['Fahrertuerkontakt'])
 
     # Update seatbelt fastened status.
-    self.seatbeltUnlatched = False if gw_cp.vl["Airbag_1"]["Gurtschalter_Fahrer"] == 3 else True
+    self.seatbeltUnlatched = not bool(gw_cp.vl["Airbag_1"]["Gurtschalter_Fahrer"])
 
     # Update driver preference for metric. VW stores many different unit
     # preferences, including separate units for for distance vs. speed.
     # We use the speed preference for OP.
-    # FIXME: Need a DBC update for this based on recently learned info
-    self.displayMetricUnits = True # You're welcome for this temp hack kamold ;)
+    self.displayMetricUnits = not gw_cp.vl["Einheiten_1"]["MFA_v_Einheit_02"]
 
     # Update ACC radar status.
-    # FIXME: Need to find ACC signals
-    #accStatus = ex_cp.vl["ACC_06"]['ACC_Status_ACC']
-    #if accStatus == 1:
-    #  # ACC okay but disabled
-    #  self.accFault = False
-    #  self.accAvailable = False
-    #  self.accEnabled = False
-    #elif accStatus == 2:
-    #  # ACC okay and enabled, but not currently engaged
-    #  self.accFault = False
-    #  self.accAvailable = True
-    #  self.accEnabled = False
-    #elif accStatus in [3, 4, 5]:
-    #  # ACC okay and enabled, currently engaged and regulating speed (3) or engaged with driver accelerating (4) or overrun (5)
-    #  self.accFault = False
-    #  self.accAvailable = True
-    #  self.accEnabled = True
-    #else:
-    #  # ACC fault of some sort. Seen statuses 6 or 7 for CAN comms disruptions, visibility issues, etc.
-    self.accFault = True
-    self.accAvailable = False
-    self.accEnabled = False
+    # FIXME: This is unfinished and not fully correct, need to improve further
+    self.accFault = False  # need a detection mechanism for radar obstructed or otherwise faulted out
+    self.accAvailable = bool(gw_cp.vl["GRA_neu"]['Hauptschalter'])
+    if gw_cp.vl["Motor_2"]['GRA_Status'] in [1, 2]:
+      self.accEnabled = True
+    else:
+      self.accEnabled = False
 
-    # Update ACC setpoint. When the setpoint is zero or there's an error, the
-    # radar sends a set-speed of ~90.69 m/s / 203mph.
-    self.accSetSpeed = gw_cp.vl["Motor_2"]['Soll_Geschwindigkeit_bei_GRA_Be']
-    # TODO: See if this condition is needed on PQ
-    if self.accSetSpeed > 90: self.accSetSpeed = 0
+    # Update ACC setpoint. When the setpoint reads as 255, the driver has not
+    # yet established an ACC setpoint, so treat it as zero.
+    self.accSetSpeed = ex_cp.vl["ACC_XX02"]['GRA_Set_Speed']
+    if self.accSetSpeed == 255:
+      self.accSetSpeed = 0
 
     # Update control button states for turn signals and ACC controls.
     self.buttonStates["leftBlinker"] = bool(gw_cp.vl["Kombi_1"]['Blinker_links_4_1'])

@@ -18,8 +18,8 @@ class CarControllerParams:
   # Limiting both torque and rate-of-change based on real-world testing and
   # Comma's safety requirements for minimum time to lane departure.
   STEER_MAX = 300                # Max heading control assist torque 3.00 Nm
-  STEER_DELTA_UP = 10            # Max HCA reached in 0.60s @ 5.0 Nm/s (STEER_MAX / (50Hz * 0.60))
-  STEER_DELTA_DOWN = 300         # Permit torque reduction at any rate
+  STEER_DELTA_UP = 4             # Max HCA reached in 0.60s @ 5.0 Nm/s (STEER_MAX / (50Hz * 0.60))
+  STEER_DELTA_DOWN = 10          # Permit torque reduction at any rate
   STEER_DRIVER_ALLOWANCE = 80
   STEER_DRIVER_MULTIPLIER = 3    # weight driver torque heavily
   STEER_DRIVER_FACTOR = 1        # from dbc
@@ -31,12 +31,16 @@ class CarController():
 
     # Setup detection helper. Routes commands to an appropriate CAN bus number.
     self.canbus = canbus
+    self.packer_gw = CANPacker(DBC[car_fingerprint]['pt'])
 
     if networkModel == NETWORK_MODEL.MQB:
-      self.update = self.update_mqb
+      self.create_steering_control = volkswagencan.create_mqb_steering_control
+      self.create_acc_buttons_control = volkswagencan.create_mqb_acc_buttons_control
+      self.create_hud_control = volkswagencan.create_mqb_hud_control
     elif networkModel == NETWORK_MODEL.PQ:
-      self.update = self.update_pq
-    self.packer_gw = CANPacker(DBC[car_fingerprint]['pt'])
+      self.create_steering_control = volkswagencan.create_pq_steering_control
+      self.create_acc_buttons_control = volkswagencan.create_pq_acc_buttons_control
+      self.create_hud_control = volkswagencan.create_pq_hud_control
 
     self.hcaSameTorqueCount = 0
     self.hcaEnabledFrameCount = 0
@@ -45,7 +49,7 @@ class CarController():
     self.graMsgStartFramePrev = 0
     self.graMsgBusCounterPrev = 0
 
-  def update_mqb(self, enabled, CS, frame, actuators, visual_alert, audible_alert, leftLaneVisible, rightLaneVisible):
+  def update(self, enabled, CS, frame, actuators, visual_alert, audible_alert, leftLaneVisible, rightLaneVisible):
     """ Controls thread """
 
     P = CarControllerParams
@@ -56,7 +60,7 @@ class CarController():
 
     #--------------------------------------------------------------------------
     #                                                                         #
-    # Prepare HCA_01 Heading Control Assist messages with steering torque.    #
+    # Prepare Heading Control Assist messages with steering torque.           #
     #                                                                         #
     #--------------------------------------------------------------------------
 
@@ -121,13 +125,13 @@ class CarController():
 
       self.apply_steer_last = apply_steer
       idx = (frame / P.HCA_STEP) % 16
-      can_sends.append(volkswagencan.create_mqb_steering_control(self.packer_gw, canbus.gateway, apply_steer,
+      can_sends.append(self.create_steering_control(self.packer_gw, canbus.gateway, apply_steer,
                                                                  idx, hcaEnabled))
 
     #--------------------------------------------------------------------------
     #                                                                         #
-    # Prepare LDW_02 HUD messages with lane borders, confidence levels, and   #
-    # the LKAS status LED.                                                    #
+    # Prepare LDW HUD messages with lane borders, confidence levels, and the  #
+    # LKAS status LED.                                                        #
     #                                                                         #
     #--------------------------------------------------------------------------
 
@@ -137,20 +141,23 @@ class CarController():
     if frame % P.LDW_STEP == 0:
       hcaEnabled = True if enabled and not CS.standstill else False
 
+      # FIXME: MQB specific, unused and not hurting anything for PQ, but consider refactoring
       if visual_alert == VisualAlert.steerRequired:
         hud_alert = MQB_LDW_MESSAGES["laneAssistTakeOverSilent"]
       else:
         hud_alert = MQB_LDW_MESSAGES["none"]
 
-      can_sends.append(volkswagencan.create_mqb_hud_control(self.packer_gw, canbus.gateway, hcaEnabled,
+      can_sends.append(self.create_hud_control(self.packer_gw, canbus.gateway, hcaEnabled,
                                                             CS.steeringPressed, hud_alert, leftLaneVisible,
                                                             rightLaneVisible))
 
     #--------------------------------------------------------------------------
     #                                                                         #
-    # Prepare GRA_ACC_01 ACC control messages with button press events.       #
+    # Prepare ACC control messages with button press events.                  #
     #                                                                         #
     #--------------------------------------------------------------------------
+
+    # FIXME: this will need substantial refactoring for PQ, plus timing fixes for MQB anyway
 
     # The car sends this message at 33hz. OP sends it on-demand only for
     # virtual button presses.
@@ -201,15 +208,10 @@ class CarController():
         if self.graMsgSentCount == 0:
           self.graMsgStartFramePrev = frame
         idx = (CS.graMsgBusCounter + 1) % 16
-        can_sends.append(volkswagencan.create_mqb_acc_buttons_control(self.packer_gw, canbus.extended, self.graButtonStatesToSend, CS, idx))
+        can_sends.append(self.create_acc_buttons_control(self.packer_gw, canbus.extended, self.graButtonStatesToSend, CS, idx))
         self.graMsgSentCount += 1
         if self.graMsgSentCount >= 16:
           self.graButtonStatesToSend = None
           self.graMsgSentCount = 0
-
-    return can_sends
-
-  def update_pq(self, enabled, CS, frame, actuators, visual_alert, audible_alert, leftLaneVisible, rightLaneVisible):
-    can_sends = []
 
     return can_sends

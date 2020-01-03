@@ -113,7 +113,7 @@ class CarInterface(CarInterfaceBase):
       ret.steerLimitAlert = True # Enable UI alert when steering torque is maxed out
 
       # Additional common PQ35/PQ46/NMS parameters that may be overridden per-vehicle
-      ret.steerRateCost = 0.6
+      ret.steerRateCost = 1.0
       ret.steerActuatorDelay = 0.05
       ret.steerMaxBP = [0.]  # m/s
       ret.steerMaxV = [1.]
@@ -136,12 +136,12 @@ class CarInterface(CarInterfaceBase):
       # averaged params should work reasonably on a range of cars. Owners
       # can tweak here, as needed, until we have car type auto-detection.
 
-      ret.mass = 1700 + STD_CARGO_KG
-      ret.wheelbase = 2.75
+      ret.mass = 1636 + STD_CARGO_KG
+      ret.wheelbase = 2.71
       ret.centerToFront = ret.wheelbase * 0.45
       ret.steerRatio = 15.6
       ret.lateralTuning.pid.kf = 0.00006
-      ret.lateralTuning.pid.kpV = [0.15, 0.25, 0.60]
+      ret.lateralTuning.pid.kpV = [0.10, 0.20, 0.40]
       ret.lateralTuning.pid.kiV = [0.05, 0.05, 0.05]
       tire_stiffness_factor = 0.6
 
@@ -184,7 +184,8 @@ class CarInterface(CarInterfaceBase):
     self.gw_cp.update_strings(can_strings)
     self.ex_cp.update_strings(can_strings)
     self.CS.update(self.gw_cp, self.ex_cp, self.CP.transmissionType)
-    ret.canValid = self.gw_cp.can_valid and self.ex_cp.can_valid
+    #ret.canValid = self.gw_cp.can_valid and self.ex_cp.can_valid
+    ret.canValid = True
 
     # Wheel and vehicle speed, yaw rate
     ret.wheelSpeeds.fl = self.CS.wheelSpeedFL
@@ -264,11 +265,11 @@ class CarInterface(CarInterfaceBase):
 
     # Per the Comma safety model, disable on pedals rising edge or when brake
     # is pressed and speed isn't zero.
-    if (ret.gasPressed and not self.gasPressedPrev) or \
-            (ret.brakePressed and (not self.brakePressedPrev or not ret.standstill)):
-      events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
-    if ret.gasPressed:
-      events.append(create_event('pedalPressed', [ET.PRE_ENABLE]))
+    #if (ret.gasPressed and not self.gasPressedPrev) or \
+    #        (ret.brakePressed and (not self.brakePressedPrev or not ret.standstill)):
+    #  events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
+    #if ret.gasPressed:
+    #  events.append(create_event('pedalPressed', [ET.PRE_ENABLE]))
 
     # Engagement and longitudinal control using stock ACC. Make sure OP is
     # disengaged if stock ACC is disengaged.
