@@ -136,10 +136,10 @@ class CarInterface(CarInterfaceBase):
       # averaged params should work reasonably on a range of cars. Owners
       # can tweak here, as needed, until we have car type auto-detection.
 
-      ret.mass = 1636 + STD_CARGO_KG
-      ret.wheelbase = 2.71
+      ret.mass = 1300 + STD_CARGO_KG
+      ret.wheelbase = 2.58
       ret.centerToFront = ret.wheelbase * 0.45
-      ret.steerRatio = 15.6
+      ret.steerRatio = 16.4
       ret.lateralTuning.pid.kf = 0.00006
       ret.lateralTuning.pid.kpV = [0.10, 0.20, 0.40]
       ret.lateralTuning.pid.kiV = [0.05, 0.05, 0.05]
