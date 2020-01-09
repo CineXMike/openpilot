@@ -2,12 +2,15 @@ void default_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
   UNUSED(to_push);
 }
 
+int default_ign_hook(void) {
+  return -1; // use GPIO to determine ignition
+}
+
 // *** no output safety mode ***
 
 static void nooutput_init(int16_t param) {
   UNUSED(param);
-  controls_allowed = false;
-  relay_malfunction = false;
+  controls_allowed = 0;
 }
 
 static int nooutput_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
@@ -27,7 +30,6 @@ static int default_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
   UNUSED(to_fwd);
   int bus_fwd = -1;
 
-
   switch (bus_num) {
     case 0:
       // Forward all traffic from J533 gateway to Extended CAN devices.
@@ -46,21 +48,11 @@ static int default_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
   return bus_fwd;
 }
 
-const safety_hooks nooutput_hooks = {
-  .init = nooutput_init,
-  .rx = default_rx_hook,
-  .tx = nooutput_tx_hook,
-  .tx_lin = nooutput_tx_lin_hook,
-  .fwd = default_fwd_hook,
-};
-
-
 // *** all output safety mode ***
 
 static void alloutput_init(int16_t param) {
   UNUSED(param);
-  controls_allowed = true;
-  relay_malfunction = false;
+  controls_allowed = 1;
 }
 
 static int alloutput_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
@@ -89,5 +81,6 @@ const safety_hooks alloutput_hooks = {
   .rx = default_rx_hook,
   .tx = alloutput_tx_hook,
   .tx_lin = alloutput_tx_lin_hook,
+  .ignition = default_ign_hook,
   .fwd = default_fwd_hook,
 };

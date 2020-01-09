@@ -1,10 +1,8 @@
+
 import time
 from panda import Panda
-from .helpers import start_heartbeat_thread, reset_pandas, time_many_sends, connect_wifi, test_white, panda_type_to_serial
-
-# Reset the pandas before running tests
-def aaaa_reset_before_tests():
-  reset_pandas()
+from .helpers import time_many_sends, connect_wifi, test_white, panda_type_to_serial
+from nose.tools import timed, assert_equal, assert_less, assert_greater
 
 @test_white
 @panda_type_to_serial
@@ -19,9 +17,6 @@ def test_get_serial_wifi(serials=None):
 def test_throughput(serials=None):
   connect_wifi(serials[0])
   p = Panda(serials[0])
-
-  # Start heartbeat
-  start_heartbeat_thread(p)
 
   # enable output mode
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
@@ -50,10 +45,6 @@ def test_throughput(serials=None):
 def test_recv_only(serials=None):
   connect_wifi(serials[0])
   p = Panda(serials[0])
-
-  # Start heartbeat
-  start_heartbeat_thread(p)
-
   p.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
 
   p.set_can_loopback(True)

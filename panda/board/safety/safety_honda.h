@@ -6,9 +6,7 @@
 //      accel rising edge
 //      brake rising edge
 //      brake > 0mph
-const AddrBus HONDA_N_TX_MSGS[] = {{0xE4, 0}, {0x194, 0}, {0x1FA, 0}, {0x200, 0}, {0x30C, 0}, {0x33D, 0}};
-const AddrBus HONDA_BH_TX_MSGS[] = {{0xE4, 0}, {0x296, 1}, {0x33D, 0}};  // Bosch Harness
-const AddrBus HONDA_BG_TX_MSGS[] = {{0xE4, 2}, {0x296, 0}, {0x33D, 2}};  // Bosch Giraffe
+
 const int HONDA_GAS_INTERCEPTOR_THRESHOLD = 328;  // ratio between offset and gain from dbc file
 int honda_brake = 0;
 int honda_gas_prev = 0;
@@ -97,17 +95,7 @@ static void honda_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
     } else if (honda_stock_brake >= honda_brake) {
       honda_fwd_brake = true;
     } else {
-      // Leave Honda forward brake as is
-    }
-  }
-
-  // if steering controls messages are received on the destination bus, it's an indication
-  // that the relay might be malfunctioning
-  int bus_rdr_car = (board_has_relay()) ? 0 : 2;  // radar bus, car side
-  if ((safety_mode_cnt > RELAY_TRNS_TIMEOUT) && ((addr == 0xE4) || (addr == 0x194))) {
-    if ((honda_bosch_hardware && (bus == bus_rdr_car)) ||
-      (!honda_bosch_hardware && (bus == 0))) {
-      relay_malfunction = true;
+      // Leave honda forward brake as is
     }
   }
 }
@@ -123,22 +111,6 @@ static int honda_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
   int tx = 1;
   int addr = GET_ADDR(to_send);
   int bus = GET_BUS(to_send);
-
-  if (honda_bosch_hardware) {
-    if (board_has_relay() && !addr_allowed(addr, bus, HONDA_BH_TX_MSGS, sizeof(HONDA_BH_TX_MSGS)/sizeof(HONDA_BH_TX_MSGS[0]))) {
-      tx = 0;
-    }
-    if (!board_has_relay() && !addr_allowed(addr, bus, HONDA_BG_TX_MSGS, sizeof(HONDA_BG_TX_MSGS)/sizeof(HONDA_BG_TX_MSGS[0]))) {
-      tx = 0;
-    }
-  }
-  if (!honda_bosch_hardware && !addr_allowed(addr, bus, HONDA_N_TX_MSGS, sizeof(HONDA_N_TX_MSGS)/sizeof(HONDA_N_TX_MSGS[0]))) {
-    tx = 0;
-  }
-
-  if (relay_malfunction) {
-    tx = 0;
-  }
 
   // disallow actuator commands if gas or brake (with vehicle moving) are pressed
   // and the the latching controls_allowed flag is True
@@ -184,7 +156,7 @@ static int honda_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
   // FORCE CANCEL: safety check only relevant when spamming the cancel button in Bosch HW
   // ensuring that only the cancel button press is sent (VAL 2) when controls are off.
   // This avoids unintended engagements while still allowing resume spam
-  int bus_pt = ((board_has_relay()) && honda_bosch_hardware)? 1 : 0;
+  int bus_pt = ((hw_type == HW_TYPE_BLACK_PANDA) && honda_bosch_hardware)? 1 : 0;
   if ((addr == 0x296) && honda_bosch_hardware &&
       !current_controls_allowed && (bus == bus_pt)) {
     if (((GET_BYTE(to_send, 0) >> 5) & 0x7) != 2) {
@@ -198,15 +170,13 @@ static int honda_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
 
 static void honda_init(int16_t param) {
   UNUSED(param);
-  controls_allowed = false;
-  relay_malfunction = false;
+  controls_allowed = 0;
   honda_bosch_hardware = false;
   honda_alt_brake_msg = false;
 }
 
 static void honda_bosch_init(int16_t param) {
-  controls_allowed = false;
-  relay_malfunction = false;
+  controls_allowed = 0;
   honda_bosch_hardware = true;
   // Checking for alternate brake override from safety parameter
   honda_alt_brake_msg = (param == 1) ? true : false;
@@ -216,24 +186,23 @@ static int honda_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
   // fwd from car to camera. also fwd certain msgs from camera to car
   // 0xE4 is steering on all cars except CRV and RDX, 0x194 for CRV and RDX,
   // 0x1FA is brake control, 0x30C is acc hud, 0x33D is lkas hud,
+  // 0x39f is radar hud
   int bus_fwd = -1;
 
-  if (!relay_malfunction) {
-    if (bus_num == 0) {
-      bus_fwd = 2;
-    }
-    if (bus_num == 2) {
-      // block stock lkas messages and stock acc messages (if OP is doing ACC)
-      int addr = GET_ADDR(to_fwd);
-      bool is_lkas_msg = (addr == 0xE4) || (addr == 0x194) || (addr == 0x33D);
-      bool is_acc_hud_msg = addr == 0x30C;
-      bool is_brake_msg = addr == 0x1FA;
-      bool block_fwd = is_lkas_msg ||
-                       (is_acc_hud_msg && long_controls_allowed) ||
-                       (is_brake_msg && long_controls_allowed && !honda_fwd_brake);
-      if (!block_fwd) {
-        bus_fwd = 0;
-      }
+  if (bus_num == 0) {
+    bus_fwd = 2;
+  }
+  if (bus_num == 2) {
+    // block stock lkas messages and stock acc messages (if OP is doing ACC)
+    int addr = GET_ADDR(to_fwd);
+    bool is_lkas_msg = (addr == 0xE4) || (addr == 0x194) || (addr == 0x33D);
+    bool is_acc_hud_msg = (addr == 0x30C) || (addr == 0x39F);
+    bool is_brake_msg = addr == 0x1FA;
+    bool block_fwd = is_lkas_msg ||
+                     (is_acc_hud_msg && long_controls_allowed) ||
+                     (is_brake_msg && long_controls_allowed && !honda_fwd_brake);
+    if (!block_fwd) {
+      bus_fwd = 0;
     }
   }
   return bus_fwd;
@@ -241,19 +210,17 @@ static int honda_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
 
 static int honda_bosch_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
   int bus_fwd = -1;
-  int bus_rdr_cam = (board_has_relay()) ? 2 : 1;  // radar bus, camera side
-  int bus_rdr_car = (board_has_relay()) ? 0 : 2;  // radar bus, car side
+  int bus_rdr_cam = (hw_type == HW_TYPE_BLACK_PANDA) ? 2 : 1;  // radar bus, camera side
+  int bus_rdr_car = (hw_type == HW_TYPE_BLACK_PANDA) ? 0 : 2;  // radar bus, car side
 
-  if (!relay_malfunction) {
-    if (bus_num == bus_rdr_car) {
-      bus_fwd = bus_rdr_cam;
-    }
-    if (bus_num == bus_rdr_cam)  {
-      int addr = GET_ADDR(to_fwd);
-      int is_lkas_msg = (addr == 0xE4) || (addr == 0x33D);
-      if (!is_lkas_msg) {
-        bus_fwd = bus_rdr_car;
-      }
+  if (bus_num == bus_rdr_car) {
+    bus_fwd = bus_rdr_cam;
+  }
+  if (bus_num == bus_rdr_cam)  {
+    int addr = GET_ADDR(to_fwd);
+    int is_lkas_msg = (addr == 0xE4) || (addr == 0x33D);
+    if (!is_lkas_msg) {
+      bus_fwd = bus_rdr_car;
     }
   }
   return bus_fwd;
@@ -264,6 +231,7 @@ const safety_hooks honda_hooks = {
   .rx = honda_rx_hook,
   .tx = honda_tx_hook,
   .tx_lin = nooutput_tx_lin_hook,
+  .ignition = default_ign_hook,
   .fwd = honda_fwd_hook,
 };
 
@@ -272,5 +240,6 @@ const safety_hooks honda_bosch_hooks = {
   .rx = honda_rx_hook,
   .tx = honda_tx_hook,
   .tx_lin = nooutput_tx_lin_hook,
+  .ignition = default_ign_hook,
   .fwd = honda_bosch_fwd_hook,
 };
