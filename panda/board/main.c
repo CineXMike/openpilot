@@ -106,8 +106,7 @@ void debug_ring_callback(uart_ring *ring) {
 
 // this is the only way to leave silent mode
 void set_safety_mode(uint16_t mode, int16_t param) {
-  uint16_t mode_copy = mode;
-  int err = set_safety_hooks(mode_copy, param);
+  int err = safety_set_mode(mode, param);
   if (err == -1) {
     puts("Error: safety set mode failed\n");
   } else {
@@ -136,41 +135,15 @@ void set_safety_mode(uint16_t mode, int16_t param) {
           can_silent = ALL_CAN_LIVE;
           break;
       }
+    if (safety_ignition_hook() != -1) {
+      // if the ignition hook depends on something other than the started GPIO
+      // we have to disable power savings (fix for GM and Tesla)
+      set_power_save_state(POWER_SAVE_STATUS_DISABLED);
+    } else {
+      // power mode is already POWER_SAVE_STATUS_DISABLED and CAN TXs are active
     }
+    can_init_all();
   }
-  switch (mode_copy) {
-    case SAFETY_SILENT:
-      set_intercept_relay(false);
-      if (board_has_obd()) {
-        current_board->set_can_mode(CAN_MODE_NORMAL);
-      }
-      can_silent = ALL_CAN_SILENT;
-      break;
-    case SAFETY_NOOUTPUT:
-      set_intercept_relay(false);
-      if (board_has_obd()) {
-        current_board->set_can_mode(CAN_MODE_NORMAL);
-      }
-      can_silent = ALL_CAN_LIVE;
-      break;
-    case SAFETY_ELM327:
-      set_intercept_relay(false);
-      heartbeat_counter = 0U;
-      if (board_has_obd()) {
-        current_board->set_can_mode(CAN_MODE_OBD_CAN2);
-      }
-      can_silent = ALL_CAN_LIVE;
-      break;
-    default:
-      set_intercept_relay(true);
-      heartbeat_counter = 0U;
-      if (board_has_obd()) {
-        current_board->set_can_mode(CAN_MODE_NORMAL);
-      }
-      can_silent = ALL_CAN_LIVE;
-      break;
-  }
-  can_init_all();
 }
 
 // ***************************** USB port *****************************
