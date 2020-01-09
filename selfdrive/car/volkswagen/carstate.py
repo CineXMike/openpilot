@@ -1,8 +1,8 @@
 import numpy as np
 from common.kalman.simple_kalman import KF1D
 from selfdrive.config import Conversions as CV
-from selfdrive.can.parser import CANParser
-from selfdrive.can.can_define import CANDefine
+from opendbc.can.parser import CANParser
+from opendbc.can.can_define import CANDefine
 from selfdrive.car.volkswagen.values import DBC, GEAR, TRANS, BUTTON_STATES, NETWORK_MODEL
 from selfdrive.car.volkswagen.carcontroller import CarControllerParams
 
@@ -173,6 +173,20 @@ def get_extended_can_parser(CP, canbus, networkModel):
     checks = []
 
   return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, canbus.extended)
+
+def get_mqb_cam_can_parser(CP, canbus):
+
+  signals = [
+    # sig_name, sig_address, default
+    ("Kombi_Lamp_Green", "LDW_02", 0),            # Lane Assist status LED
+  ]
+
+  checks = [
+    # sig_address, frequency
+    ("LDW_02", 10)        # From R242 Driver assistance camera
+  ]
+
+  return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, canbus.cam)
 
 def parse_gear_shifter(gear, vals):
   # Return mapping of gearshift position to selected gear.

@@ -1,8 +1,5 @@
-#-------------------------------------------------------------------------#
-#                                                                         #
-# CAN message packing for MQB vehicles                                    #
-#                                                                         #
-#-------------------------------------------------------------------------#
+# CAN controls for MQB platform Volkswagen, Audi, Skoda and SEAT.
+# PQ35/PQ46/NMS, and any future MLB, to come later.
 
 def create_mqb_steering_control(packer, bus, apply_steer, idx, lkas_enabled):
   values = {

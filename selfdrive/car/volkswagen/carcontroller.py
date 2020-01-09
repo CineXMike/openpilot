@@ -2,7 +2,7 @@ from cereal import car
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.volkswagen import volkswagencan
 from selfdrive.car.volkswagen.values import DBC, MQB_LDW_MESSAGES, BUTTON_STATES, NETWORK_MODEL
-from selfdrive.can.packer import CANPacker
+from opendbc.can.packer import CANPacker
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
@@ -32,6 +32,7 @@ class CarController():
     # Setup detection helper. Routes commands to an appropriate CAN bus number.
     self.canbus = canbus
     self.packer_gw = CANPacker(DBC[car_fingerprint]['pt'])
+    self.packer_pt = CANPacker(DBC[car_fingerprint]['pt'])
 
     if networkModel == NETWORK_MODEL.MQB:
       self.create_steering_control = volkswagencan.create_mqb_steering_control
@@ -48,6 +49,8 @@ class CarController():
     self.graMsgSentCount = 0
     self.graMsgStartFramePrev = 0
     self.graMsgBusCounterPrev = 0
+
+    self.steer_rate_limited = False
 
   def update(self, enabled, CS, frame, actuators, visual_alert, audible_alert, leftLaneVisible, rightLaneVisible):
     """ Controls thread """
@@ -79,8 +82,10 @@ class CarController():
         # is inherently handled by scaling to STEER_MAX. The rack doesn't seem
         # to care about up/down rate, but we have some evidence it may do its
         # own rate limiting, and matching OP helps for accurate tuning.
-        apply_steer = int(round(actuators.steer * P.STEER_MAX))
-        apply_steer = apply_std_steer_torque_limits(apply_steer, self.apply_steer_last, CS.steeringTorque, P)
+
+        new_steer = int(round(actuators.steer * P.STEER_MAX))
+        apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.steeringTorque, P)
+        self.steer_rate_limited = new_steer != apply_steer
 
         # FAULT AVOIDANCE: HCA must not be enabled for >360 seconds. Sending
         # a single frame with HCA disabled is an effective workaround.
@@ -125,8 +130,7 @@ class CarController():
 
       self.apply_steer_last = apply_steer
       idx = (frame / P.HCA_STEP) % 16
-      can_sends.append(self.create_steering_control(self.packer_gw, canbus.gateway, apply_steer,
-                                                                 idx, hcaEnabled))
+      can_sends.append(self.create_steering_control(self.packer_gw, canbus.gateway, apply_steer, idx, hcaEnabled))
 
     #--------------------------------------------------------------------------
     #                                                                         #
@@ -141,24 +145,20 @@ class CarController():
     if frame % P.LDW_STEP == 0:
       hcaEnabled = True if enabled and not CS.standstill else False
 
-      # FIXME: MQB specific, unused and not hurting anything for PQ, but consider refactoring
       if visual_alert == VisualAlert.steerRequired:
         hud_alert = MQB_LDW_MESSAGES["laneAssistTakeOverSilent"]
       else:
         hud_alert = MQB_LDW_MESSAGES["none"]
 
-      can_sends.append(self.create_hud_control(self.packer_gw, canbus.gateway, hcaEnabled,
-                                                            CS.steeringPressed, hud_alert, leftLaneVisible,
-                                                            rightLaneVisible))
+
+      can_sends.append(self.create_hud_control(self.packer_gw, canbus.gateway, hcaEnabled, CS.steeringPressed, hud_alert, leftLaneVisible, rightLaneVisible))
 
     #--------------------------------------------------------------------------
     #                                                                         #
     # Prepare ACC control messages with button press events.                  #
     #                                                                         #
     #--------------------------------------------------------------------------
-
     # FIXME: this will need substantial refactoring for PQ, plus timing fixes for MQB anyway
-
     # The car sends this message at 33hz. OP sends it on-demand only for
     # virtual button presses.
     #

@@ -11,16 +11,13 @@ if [ -z "$PASSIVE" ]; then
 fi
 
 function launch {
+  # Wifi scan
+  wpa_cli IFNAME=wlan0 SCAN
+
   # apply update
   if [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u})" ]; then
     git reset --hard @{u} &&
     git clean -xdf &&
-
-    # Touch all files on release2 after checkout to prevent rebuild
-    BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    if [[ "$BRANCH" == "release2" ]]; then
-        touch **
-    fi
 
     exec "${BASH_SOURCE[0]}"
   fi
@@ -51,7 +48,7 @@ function launch {
 
 
   # handle pythonpath
-  ln -s /data/openpilot /data/pythonpath
+  ln -sfn $(pwd) /data/pythonpath
   export PYTHONPATH="$PWD"
 
   # start manager

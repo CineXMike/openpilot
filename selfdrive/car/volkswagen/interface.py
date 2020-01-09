@@ -9,6 +9,8 @@ from common.params import Params
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, is_ecu_disconnected
 from selfdrive.car.interfaces import CarInterfaceBase
 
+GEAR = car.CarState.GearShifter
+
 class CANBUS:
   gateway = 0
   extended = 2
@@ -102,7 +104,6 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kpV = [0.15, 0.25, 0.60]
       ret.lateralTuning.pid.kiV = [0.05, 0.05, 0.05]
       tire_stiffness_factor = 0.6
-
     elif candidate == CAR.GENERICPQ:
       # Set common PQ35/PQ46/NMS parameters that will apply globally
       ret.carName = "volkswagen"
@@ -202,6 +203,7 @@ class CarInterface(CarInterfaceBase):
     ret.steeringRate = self.CS.steeringRate
     ret.steeringTorque = self.CS.steeringTorque
     ret.steeringPressed = self.CS.steeringPressed
+    ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
     ret.yawRate = self.CS.yawRate
 
     # Gas, brakes and shifting
@@ -245,13 +247,10 @@ class CarInterface(CarInterfaceBase):
       events.append(create_event('doorOpen', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if ret.seatbeltUnlatched:
       events.append(create_event('seatbeltNotLatched', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
-    if ret.gearShifter == 'reverse':
+    if ret.gearShifter == GEAR.reverse:
       events.append(create_event('reverseGear', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE]))
-    if not ret.gearShifter == 'drive' and not ret.gearShifter == 'eco':
-      if ret.clutchPressed:
-        events.append(create_event('wrongGear', [ET.NO_ENTRY]))
-      else:
-        events.append(create_event('wrongGear', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
+    if not ret.gearShifter in [GEAR.drive, GEAR.eco, GEAR.sport]:
+      events.append(create_event('wrongGear', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.stabilityControlDisabled:
       events.append(create_event('espDisabled', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.parkingBrakeSet:
@@ -265,6 +264,7 @@ class CarInterface(CarInterfaceBase):
 
     # Per the Comma safety model, disable on pedals rising edge or when brake
     # is pressed and speed isn't zero.
+
     #if (ret.gasPressed and not self.gasPressedPrev) or \
     #        (ret.brakePressed and (not self.brakePressedPrev or not ret.standstill)):
     #  events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
