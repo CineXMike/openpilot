@@ -1,5 +1,22 @@
-from cereal import car
 from selfdrive.car import dbc_dict
+
+class CarControllerParams:
+  HCA_STEP = 2                   # HCA_01 message frequency 50Hz
+  LDW_STEP = 10                  # LDW_02 message frequency 10Hz
+  GRA_ACC_STEP = 3               # GRA_ACC_01 message frequency 33Hz
+
+  GRA_VBP_STEP = 100             # Send ACC virtual button presses once a second
+  GRA_VBP_COUNT = 16             # Send VBP messages for ~0.5s (GRA_ACC_STEP * 16)
+
+  # Observed documented MQB limits: 3.00 Nm max, rate of change 5.00 Nm/sec.
+  # Limiting both torque and rate-of-change based on real-world testing and
+  # Comma's safety requirements for minimum time to lane departure.
+  STEER_MAX = 300                # Max heading control assist torque 3.00 Nm
+  STEER_DELTA_UP = 4             # Max HCA reached in 1.50s (STEER_MAX / (50Hz * 1.50))
+  STEER_DELTA_DOWN = 10          # Min HCA reached in 0.60s (STEER_MAX / (50Hz * 0.60))
+  STEER_DRIVER_ALLOWANCE = 80
+  STEER_DRIVER_MULTIPLIER = 3    # weight driver torque heavily
+  STEER_DRIVER_FACTOR = 1        # from dbc
 
 BUTTON_STATES = {
   "leftBlinker": False,
@@ -43,20 +60,11 @@ FINGERPRINTS = {
   ],
 }
 
-GEAR = car.CarState.GearShifter
-TRANS = car.CarParams.TransmissionType
-
 class ECU:
   CAM = 0
-  RADAR = 1
-  AUTO_TRANS = 2
-  EV_TRANS = 3
 
 ECU_FINGERPRINT = {
   ECU.CAM: [294, 919],                    # HCA_01 Heading Control Assist, LDW_02 Lane Departure Warning
-  ECU.RADAR: [780, 804, 290, 302, 279],   # ACC_02, ACC_04, ACC_06, ACC_07, ACC_10
-  ECU.AUTO_TRANS: [173],                  # Getriebe_11 Automatic gearbox
-  ECU.EV_TRANS: [391],                    # Community documented e-Golf gearshift position message
 }
 
 DBC = {

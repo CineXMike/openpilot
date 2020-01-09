@@ -34,6 +34,24 @@ struct sample_t volkswagen_torque_driver;
 TIM_TypeDef timer;
 TIM_TypeDef *TIM2 = &timer;
 
+// from board_declarations.h
+#define HW_TYPE_UNKNOWN 0U
+#define HW_TYPE_WHITE_PANDA 1U
+#define HW_TYPE_GREY_PANDA 2U
+#define HW_TYPE_BLACK_PANDA 3U
+#define HW_TYPE_PEDAL 4U
+#define HW_TYPE_UNO 5U
+
+#define ALLOW_DEBUG
+
+// from main_declarations.h
+uint8_t hw_type = HW_TYPE_UNKNOWN;
+
+// from board.h
+bool board_has_relay(void) {
+  return hw_type == HW_TYPE_BLACK_PANDA || hw_type == HW_TYPE_UNO;
+}
+
 // from config.h
 #define MIN(a,b)                                \
   ({ __typeof__ (a) _a = (a);                   \
@@ -53,16 +71,6 @@ TIM_TypeDef *TIM2 = &timer;
 #define GET_BYTES_04(msg) ((msg)->RDLR)
 #define GET_BYTES_48(msg) ((msg)->RDHR)
 
-// from board_declarations.h
-#define HW_TYPE_UNKNOWN 0U
-#define HW_TYPE_WHITE_PANDA 1U
-#define HW_TYPE_GREY_PANDA 2U
-#define HW_TYPE_BLACK_PANDA 3U
-#define HW_TYPE_PEDAL 4U
-
-// from main_declarations.h
-uint8_t hw_type = 0U;
-
 #define UNUSED(x) (void)(x)
 
 #define PANDA
@@ -72,6 +80,10 @@ uint8_t hw_type = 0U;
 
 void set_controls_allowed(bool c){
   controls_allowed = c;
+}
+
+void set_relay_malfunction(bool c){
+  relay_malfunction = c;
 }
 
 void set_long_controls_allowed(bool c){
@@ -88,6 +100,10 @@ void reset_angle_control(void){
 
 bool get_controls_allowed(void){
   return controls_allowed;
+}
+
+bool get_relay_malfunction(void){
+  return relay_malfunction;
 }
 
 bool get_long_controls_allowed(void){
@@ -110,10 +126,6 @@ void set_timer(uint32_t t){
   timer.CNT = t;
 }
 
-void set_toyota_camera_forwarded(int t){
-  toyota_camera_forwarded = t;
-}
-
 void set_toyota_torque_meas(int min, int max){
   toyota_torque_meas.min = min;
   toyota_torque_meas.max = max;
@@ -132,18 +144,6 @@ void set_gm_torque_driver(int min, int max){
 void set_hyundai_torque_driver(int min, int max){
   hyundai_torque_driver.min = min;
   hyundai_torque_driver.max = max;
-}
-
-void set_hyundai_camera_bus(int t){
-  hyundai_camera_bus = t;
-}
-
-void set_hyundai_giraffe_switch_2(int t){
-  hyundai_giraffe_switch_2 = t;
-}
-
-void set_chrysler_camera_detected(int t){
-  chrysler_camera_detected = t;
 }
 
 void set_chrysler_torque_meas(int min, int max){
@@ -272,6 +272,7 @@ void set_honda_fwd_brake(bool c){
 void init_tests(void){
   // get HW_TYPE from env variable set in test.sh
   hw_type = atoi(getenv("HW_TYPE"));
+  safety_mode_cnt = 2U;  // avoid ignoring relay_malfunction logic
 }
 
 void init_tests_toyota(void){

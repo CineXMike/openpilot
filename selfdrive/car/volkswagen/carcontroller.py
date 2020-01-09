@@ -1,28 +1,11 @@
 from cereal import car
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.volkswagen import volkswagencan
-from selfdrive.car.volkswagen.values import DBC, MQB_LDW_MESSAGES, BUTTON_STATES
-from selfdrive.can.packer import CANPacker
+from selfdrive.car.volkswagen.values import DBC, MQB_LDW_MESSAGES, BUTTON_STATES, CarControllerParams
+from opendbc.can.packer import CANPacker
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
-class CarControllerParams:
-  HCA_STEP = 2                   # HCA_01 message frequency 50Hz
-  LDW_STEP = 10                  # LDW_02 message frequency 10Hz
-  GRA_ACC_STEP = 3               # GRA_ACC_01 message frequency 33Hz
-
-  GRA_VBP_STEP = 100             # Send ACC virtual button presses once a second
-  GRA_VBP_COUNT = 16             # Send VBP messages for ~0.5s (GRA_ACC_STEP * 16)
-
-  # Observed documented MQB limits: 3.00 Nm max, rate of change 5.00 Nm/sec.
-  # Limiting both torque and rate-of-change based on real-world testing and
-  # Comma's safety requirements for minimum time to lane departure.
-  STEER_MAX = 300                # Max heading control assist torque 3.00 Nm
-  STEER_DELTA_UP = 10            # Max HCA reached in 0.60s @ 5.0 Nm/s (STEER_MAX / (50Hz * 0.60))
-  STEER_DELTA_DOWN = 300         # Permit torque reduction at any rate
-  STEER_DRIVER_ALLOWANCE = 80
-  STEER_DRIVER_MULTIPLIER = 3    # weight driver torque heavily
-  STEER_DRIVER_FACTOR = 1        # from dbc
 
 class CarController():
   def __init__(self, canbus, car_fingerprint):
@@ -31,7 +14,7 @@ class CarController():
 
     # Setup detection helper. Routes commands to an appropriate CAN bus number.
     self.canbus = canbus
-    self.packer_gw = CANPacker(DBC[car_fingerprint]['pt'])
+    self.packer_pt = CANPacker(DBC[car_fingerprint]['pt'])
 
     self.hcaSameTorqueCount = 0
     self.hcaEnabledFrameCount = 0
@@ -39,6 +22,8 @@ class CarController():
     self.graMsgSentCount = 0
     self.graMsgStartFramePrev = 0
     self.graMsgBusCounterPrev = 0
+
+    self.steer_rate_limited = False
 
   def update(self, enabled, CS, frame, actuators, visual_alert, audible_alert, leftLaneVisible, rightLaneVisible):
     """ Controls thread """
@@ -70,8 +55,9 @@ class CarController():
         # is inherently handled by scaling to STEER_MAX. The rack doesn't seem
         # to care about up/down rate, but we have some evidence it may do its
         # own rate limiting, and matching OP helps for accurate tuning.
-        apply_steer = int(round(actuators.steer * P.STEER_MAX))
-        apply_steer = apply_std_steer_torque_limits(apply_steer, self.apply_steer_last, CS.steeringTorque, P)
+        new_steer = int(round(actuators.steer * P.STEER_MAX))
+        apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.steeringTorque, P)
+        self.steer_rate_limited = new_steer != apply_steer
 
         # FAULT AVOIDANCE: HCA must not be enabled for >360 seconds. Sending
         # a single frame with HCA disabled is an effective workaround.
@@ -116,7 +102,7 @@ class CarController():
 
       self.apply_steer_last = apply_steer
       idx = (frame / P.HCA_STEP) % 16
-      can_sends.append(volkswagencan.create_mqb_steering_control(self.packer_gw, canbus.gateway, apply_steer,
+      can_sends.append(volkswagencan.create_mqb_steering_control(self.packer_pt, canbus.pt, apply_steer,
                                                                  idx, hcaEnabled))
 
     #--------------------------------------------------------------------------
@@ -137,7 +123,7 @@ class CarController():
       else:
         hud_alert = MQB_LDW_MESSAGES["none"]
 
-      can_sends.append(volkswagencan.create_mqb_hud_control(self.packer_gw, canbus.gateway, hcaEnabled,
+      can_sends.append(volkswagencan.create_mqb_hud_control(self.packer_pt, canbus.pt, hcaEnabled,
                                                             CS.steeringPressed, hud_alert, leftLaneVisible,
                                                             rightLaneVisible))
 
@@ -196,9 +182,9 @@ class CarController():
         if self.graMsgSentCount == 0:
           self.graMsgStartFramePrev = frame
         idx = (CS.graMsgBusCounter + 1) % 16
-        can_sends.append(volkswagencan.create_mqb_acc_buttons_control(self.packer_gw, canbus.extended, self.graButtonStatesToSend, CS, idx))
+        can_sends.append(volkswagencan.create_mqb_acc_buttons_control(self.packer_pt, canbus.cam, self.graButtonStatesToSend, CS, idx))
         self.graMsgSentCount += 1
-        if self.graMsgSentCount >= 16:
+        if self.graMsgSentCount >= P.GRA_VBP_COUNT:
           self.graButtonStatesToSend = None
           self.graMsgSentCount = 0
 

@@ -1,17 +1,18 @@
 from cereal import car
-from selfdrive.swaglog import cloudlog
 from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from selfdrive.controls.lib.vehicle_model import VehicleModel
-from selfdrive.car.volkswagen.values import CAR, BUTTON_STATES, ECU, ECU_FINGERPRINT, FINGERPRINTS, TRANS
-from selfdrive.car.volkswagen.carstate import CarState, get_mqb_gateway_can_parser, get_mqb_extended_can_parser
+from selfdrive.car.volkswagen.values import CAR, BUTTON_STATES
+from selfdrive.car.volkswagen.carstate import CarState, get_mqb_pt_can_parser, get_mqb_cam_can_parser
 from common.params import Params
-from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, is_ecu_disconnected
+from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint
 from selfdrive.car.interfaces import CarInterfaceBase
 
+GEAR = car.CarState.GearShifter
+
 class CANBUS:
-  gateway = 0
-  extended = 2
+  pt = 0
+  cam = 2
 
 class CarInterface(CarInterfaceBase):
   def __init__(self, CP, CarController):
@@ -29,8 +30,8 @@ class CarInterface(CarInterfaceBase):
     # *** init the major players ***
     self.CS = CarState(CP, CANBUS)
     self.VM = VehicleModel(CP)
-    self.gw_cp = get_mqb_gateway_can_parser(CP, CANBUS)
-    self.ex_cp = get_mqb_extended_can_parser(CP, CANBUS)
+    self.pt_cp = get_mqb_pt_can_parser(CP, CANBUS)
+    self.cam_cp = get_mqb_cam_can_parser(CP, CANBUS)
 
     # sending if read only is False
     if CarController is not None:
@@ -55,23 +56,13 @@ class CarInterface(CarInterfaceBase):
       ret.enableCruise = True # Stock ACC still controls acceleration and braking
       ret.openpilotLongitudinalControl = False
       ret.steerControlType = car.CarParams.SteerControlType.torque
-      ret.steerLimitAlert = True # Enable UI alert when steering torque is maxed out
 
       # Additional common MQB parameters that may be overridden per-vehicle
-      ret.steerRateCost = 0.6
+      ret.steerRateCost = 1.0
       ret.steerActuatorDelay = 0.05 # Hopefully all MQB racks are similar here
+      ret.steerLimitTimer = 0.4
       ret.steerMaxBP = [0.]  # m/s
       ret.steerMaxV = [1.]
-
-      hasGasAutoTrans = not is_ecu_disconnected(fingerprint[CANBUS.gateway], FINGERPRINTS, ECU_FINGERPRINT, candidate, ECU.AUTO_TRANS)
-      hasEVAutoTrans = not is_ecu_disconnected(fingerprint[CANBUS.gateway], FINGERPRINTS, ECU_FINGERPRINT, candidate, ECU.EV_TRANS)
-      if hasGasAutoTrans:
-        ret.transmissionType = TRANS.automatic
-      elif hasEVAutoTrans:
-        ret.transmissionType = TRANS.unknown # FIXME: abusing trans type unknown for EV because it's the only way to get info from get_params w/o refactoring
-      else:
-        ret.transmissionType = TRANS.manual
-      cloudlog.warning("VW MQB: detected %s transmission", ret.transmissionType)
 
       # As a starting point for speed-adjusted lateral tuning, use the example
       # map speed breakpoints from a VW Tiguan (SSP 399 page 9). It's unclear
@@ -79,8 +70,8 @@ class CarInterface(CarInterfaceBase):
       # HCA assist torque, but if they're good breakpoints for the driver,
       # they're probably good breakpoints for HCA as well. OP won't be driving
       # 250kph/155mph but it provides interpolation scaling above 100kmh/62mph.
-      ret.lateralTuning.pid.kpBP = [0., 15 * CV.KPH_TO_MS, 50 * CV.KPH_TO_MS]
-      ret.lateralTuning.pid.kiBP = [0., 15 * CV.KPH_TO_MS, 50 * CV.KPH_TO_MS]
+      ret.lateralTuning.pid.kpBP = [0., 15 * CV.KPH_TO_MS, 50 * CV.KPH_TO_MS, 100 * CV.KPH_TO_MS, 250 * CV.KPH_TO_MS]
+      ret.lateralTuning.pid.kiBP = [0., 15 * CV.KPH_TO_MS, 50 * CV.KPH_TO_MS, 100 * CV.KPH_TO_MS, 250 * CV.KPH_TO_MS]
 
       # FIXME: Per-vehicle parameters need to be reintegrated.
       # For the time being, per-vehicle stuff is being archived since we
@@ -88,16 +79,19 @@ class CarInterface(CarInterfaceBase):
       # averaged params should work reasonably on a range of cars. Owners
       # can tweak here, as needed, until we have car type auto-detection.
 
-      ret.mass = 1700 + STD_CARGO_KG
-      ret.wheelbase = 2.75
+      # Parameters below are reasonable for a Volkswagen Golf. Until we have
+      # VIN fingerprinting, anybody who doesn't drive a Golf will need to
+      # adjust these variables to get proper driving behavior.
+      ret.mass = 1450 + STD_CARGO_KG
+      ret.wheelbase = 2.64
       ret.centerToFront = ret.wheelbase * 0.45
       ret.steerRatio = 15.6
       ret.lateralTuning.pid.kf = 0.00006
-      ret.lateralTuning.pid.kpV = [0.15, 0.25, 0.60]
-      ret.lateralTuning.pid.kiV = [0.05, 0.05, 0.05]
-      tire_stiffness_factor = 0.6
+      ret.lateralTuning.pid.kpV = [0.15, 0.25, 0.35, 0.45, 0.45]
+      ret.lateralTuning.pid.kiV = [0.05, 0.05, 0.05, 0.05, 0.05]
+      tire_stiffness_factor = 1.0
 
-    ret.enableCamera = True # Stock camera detection doesn't apply to VW
+    ret.enableCamera = True  # Stock camera detection doesn't apply to VW
     ret.transmissionType = car.CarParams.TransmissionType.automatic
     ret.steerRatioRear = 0.
 
@@ -133,10 +127,12 @@ class CarInterface(CarInterfaceBase):
     ret = car.CarState.new_message()
 
     # Process the most recent CAN message traffic, and check for validity
-    self.gw_cp.update_strings(can_strings)
-    self.ex_cp.update_strings(can_strings)
-    self.CS.update(self.gw_cp, self.ex_cp, self.CP.transmissionType)
-    ret.canValid = self.gw_cp.can_valid and self.ex_cp.can_valid
+    # The camera CAN has no signals we use at this time, but we process it
+    # anyway so we can test connectivity with can_valid
+    self.pt_cp.update_strings(can_strings)
+    self.cam_cp.update_strings(can_strings)
+    self.CS.update(self.pt_cp, self.cam_cp)
+    ret.canValid = self.pt_cp.can_valid and self.cam_cp.can_valid
 
     # Wheel and vehicle speed, yaw rate
     ret.wheelSpeeds.fl = self.CS.wheelSpeedFL
@@ -153,6 +149,7 @@ class CarInterface(CarInterfaceBase):
     ret.steeringRate = self.CS.steeringRate
     ret.steeringTorque = self.CS.steeringTorque
     ret.steeringPressed = self.CS.steeringPressed
+    ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
     ret.yawRate = self.CS.yawRate
 
     # Gas, brakes and shifting
@@ -162,7 +159,6 @@ class CarInterface(CarInterfaceBase):
     ret.brakePressed = self.CS.brakePressed
     ret.brakeLights = self.CS.brakeLights
     ret.gearShifter = self.CS.gearShifter
-    ret.clutchPressed = self.CS.clutchPressed
 
     # Doors open, seatbelt unfastened
     ret.doorOpen = self.CS.doorOpen
@@ -196,13 +192,10 @@ class CarInterface(CarInterfaceBase):
       events.append(create_event('doorOpen', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if ret.seatbeltUnlatched:
       events.append(create_event('seatbeltNotLatched', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
-    if ret.gearShifter == 'reverse':
+    if ret.gearShifter == GEAR.reverse:
       events.append(create_event('reverseGear', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE]))
-    if not ret.gearShifter == 'drive' and not ret.gearShifter == 'eco':
-      if ret.clutchPressed:
-        events.append(create_event('wrongGear', [ET.NO_ENTRY]))
-      else:
-        events.append(create_event('wrongGear', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
+    if not ret.gearShifter in [GEAR.drive, GEAR.eco, GEAR.sport]:
+      events.append(create_event('wrongGear', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.stabilityControlDisabled:
       events.append(create_event('espDisabled', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.parkingBrakeSet:
