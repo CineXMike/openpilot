@@ -408,7 +408,7 @@ class CarState():
     if self.accSetSpeed == 255:
       self.accSetSpeed = 0
 
-    newLeftBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4']
+    newLeftBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4'])
     newRightBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4'])
 
     if newLeftBlinkerState != 17:
