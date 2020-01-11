@@ -136,7 +136,7 @@ def get_gateway_can_parser(CP, canbus, networkModel):
       ("Motor_2", 50),          # From J623 Engine control module
       ("Systeminfo_1", 10),     # From J??? not known if gateway, cluster, or BCM
       ("Einheiten_1", 1),       # From ???
-      ("Gateway_Komfort_1", 1), 3 From ???
+      ("Gateway_Komfort_1", 1), # From ???
     ]
 
   else:
