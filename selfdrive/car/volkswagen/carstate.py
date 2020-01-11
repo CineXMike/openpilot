@@ -120,6 +120,7 @@ def get_gateway_can_parser(CP, canbus, networkModel):
       ("Wiederaufnahme", "GRA_neu", 0),                 # ACC button, resume
       ("Zeitlueckenverstellung", "GRA_neu", 0),         # ACC button, time gap adj
       ("Rechtslenker", "Systeminfo_1", 0),              # RHD vs LHD vehicle construction
+      ("Frei_Gateway_Komfort_1_4", "Gateway_Komfort_1", 16), # Blinker Signals
     ]
 
     checks = [
@@ -407,9 +408,22 @@ class CarState():
     if self.accSetSpeed == 255:
       self.accSetSpeed = 0
 
+    newLeftBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4']
+    newRightBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4'])
+
+    if newLeftBlinkerState != 17:
+      newLeftBlinkerState = 0
+    else:
+      newLeftBlinkerState = 1
+
+    if newRightBlinkerState != 18:
+      newRightBlinkerState = 0
+    else:
+      newRightBlinkerState = 1
+
     # Update control button states for turn signals and ACC controls.
-    self.buttonStates["leftBlinker"] = bool(gw_cp.vl["Kombi_1"]['Blinker_links_4_1'])
-    self.buttonStates["leftBlinker"] = bool(gw_cp.vl["Kombi_1"]['Blinker_rechts_4_1'])
+    self.buttonStates["leftBlinker"] = newLeftBlinkerState
+    self.buttonStates["leftBlinker"] = newRightBlinkerState
     self.buttonStates["accelCruise"] = bool(gw_cp.vl["GRA_neu"]['Kurz_Tip_up']) or bool(gw_cp.vl["GRA_neu"]['Lang_Tip_up'])
     self.buttonStates["decelCruise"] = bool(gw_cp.vl["GRA_neu"]['Kurz_Tip_down']) or bool(gw_cp.vl["GRA_neu"]['Lang_Tip_down'])
     self.buttonStates["cancel"] = bool(gw_cp.vl["GRA_neu"]['Abbrechen'])
