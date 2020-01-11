@@ -136,6 +136,7 @@ def get_gateway_can_parser(CP, canbus, networkModel):
       ("Motor_2", 50),          # From J623 Engine control module
       ("Systeminfo_1", 10),     # From J??? not known if gateway, cluster, or BCM
       ("Einheiten_1", 1),       # From ???
+      ("Gateway_Komfort_1", 1), 3 From ???
     ]
 
   else:
@@ -408,22 +409,11 @@ class CarState():
     if self.accSetSpeed == 255:
       self.accSetSpeed = 0
 
-    newLeftBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4'])
-    newRightBlinkerState = bool(gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4'])
-
-    if newLeftBlinkerState != 17:
-      newLeftBlinkerState = 0
-    else:
-      newLeftBlinkerState = 1
-
-    if newRightBlinkerState != 18:
-      newRightBlinkerState = 0
-    else:
-      newRightBlinkerState = 1
-
     # Update control button states for turn signals and ACC controls.
-    self.buttonStates["leftBlinker"] = newLeftBlinkerState
-    self.buttonStates["leftBlinker"] = newRightBlinkerState
+    newBlinkerState = gw_cp.vl["Gateway_Komfort_1"]['Frei_Gateway_Komfort_1_4']
+
+    self.buttonStates["leftBlinker"] = True if newBlinkerState == 17 else False
+    self.buttonStates["rightBlinker"] = True if newBlinkerState == 18 else False
     self.buttonStates["accelCruise"] = bool(gw_cp.vl["GRA_neu"]['Kurz_Tip_up']) or bool(gw_cp.vl["GRA_neu"]['Lang_Tip_up'])
     self.buttonStates["decelCruise"] = bool(gw_cp.vl["GRA_neu"]['Kurz_Tip_down']) or bool(gw_cp.vl["GRA_neu"]['Lang_Tip_down'])
     self.buttonStates["cancel"] = bool(gw_cp.vl["GRA_neu"]['Abbrechen'])
