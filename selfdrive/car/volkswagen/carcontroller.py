@@ -28,6 +28,7 @@ class CarControllerParams:
 class CarController():
   def __init__(self, canbus, car_fingerprint, networkModel):
     self.apply_steer_last = 0
+    self.apply_brake_last = -1
     self.car_fingerprint = car_fingerprint
 
     # Setup detection helper. Routes commands to an appropriate CAN bus number.
@@ -142,13 +143,24 @@ class CarController():
     #--------------------------------------------------------------------------
     if frame % P.MOB_STEP == 0:
       mobEnabled = True if enabled else False
-      apply_brake = 0
+      apply_brake = self.apply_brake_last
 
       if enabled:
-        apply_brake = 1280
+        if apply_brake == -1:
+          apply_brake = 0
+          mobPreEnable = True
+        else:
+          mobPreEnable = True
+          apply_brake = self.apply_brake_last + 1
+      else:
+        apply_brake = -1
+        mobPreEnable = False
 
       idx = (frame / P.MOB_STEP) % 16
-      can_sends.append(self.create_braking_control(self.packer_gw, canbus.powertrain, apply_brake, idx, mobEnabled))
+      self.apply_brake_last = apply_brake
+      if not enabled:
+        apply_brake = 0
+      can_sends.append(self.create_braking_control(self.packer_gw, canbus.powertrain, apply_brake, idx, mobEnabled, mobPreEnable))
 
     #--------------------------------------------------------------------------
     #                                                                         #
