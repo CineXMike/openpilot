@@ -70,7 +70,7 @@ def is_on_wifi():
     result = android.parse_service_call_string(["connectivity", "2"])
     return 'WIFI' in result
   except AttributeError:
-    return False
+    return True
 
 def is_on_hotspot():
   try:
