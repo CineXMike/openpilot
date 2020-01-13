@@ -145,7 +145,7 @@ class CarController():
       apply_brake = 0
 
       idx = (frame / P.MOB_STEP) % 16
-      can_sends.append(self.create_braking_control(self.packer_gw, canbus.gateway, apply_brake, idx, mobEnabled))
+      can_sends.append(self.create_braking_control(self.packer_gw, canbus.powertrain, apply_brake, idx, mobEnabled))
 
     #--------------------------------------------------------------------------
     #                                                                         #
