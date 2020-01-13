@@ -1058,6 +1058,15 @@ BO_ 210 PQ_HCA: 5 XXX
  SG_ Vib_Freq : 32|4@1+ (4,0) [0|60] "Hz" XXX
  SG_ Vib_Amp : 36|4@1+ (0.5,0) [0|7.5] "Nm" XXX
 
+BO_ 644 PQ_MOB: 5 Motor_Diesel
+ SG_ MOB_Standby : 12|1@1+ (1,0) [0|1] "" Bremse_MK25AESP
+ SG_ MOB_Freigabe : 14|1@1+ (1,0) [0|1] "" BCM_Gateway,Bremse_MK25AESP,Gateway_separat
+ SG_ MOB_Anhaltewunsch : 13|1@1+ (1,0) [0|1] "" Bremse_MK25AESP,Getriebe_DQ
+ SG_ PQ_MOB_CHECKSUM : 0|8@1+ (1,0) [0|255] "" Bremse_MK25AESP
+ SG_ PQ_MOB_COUNTER : 8|4@1+ (1,0) [0|15] "" Bremse_MK25AESP
+ SG_ MOB_Bremsmom : 27|13@1+ (4,0) [0|32760] "Unit_NewtoMeter" Bremse_MK25AESP
+ SG_ MOB_Bremsstgr : 16|11@1+ (2.91452,0) [0|32760] "Unit_NewtoMeter" Vector__XXX
+
 BO_ 1550 Einheiten_1: 2 XXX
  SG_ MFA_v_Einheit_02 : 0|1@1+ (1,0) [0|1] "" XXX
 
