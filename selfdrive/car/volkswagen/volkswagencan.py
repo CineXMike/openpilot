@@ -73,8 +73,9 @@ def create_pq_steering_control(packer, bus, apply_steer, idx, lkas_enabled):
 def create_pq_braking_control(packer, bus, apply_brake, idx, brake_enabled):
   values = {
     "PQ_MOB_COUNTER": idx,
-    "LM_Offset": abs(apply_steer),
-    "MOB_Standby": 1 if (brake_enabled and apply_brake != 0) else 0,
+    "MOB_Bremsmom": abs(apply_brake),
+    "MOB_Bremsstgr": abs(apply_brake),
+    "MOB_Standby": 1 if (brake_enabled) else 0,
     "MOB_Freigabe": 1 if (brake_enabled and apply_brake != 0) else 0,
     "MOB_Anhaltewunsch": 0,
   }
