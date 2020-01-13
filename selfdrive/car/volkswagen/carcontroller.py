@@ -142,9 +142,9 @@ class CarController():
     #--------------------------------------------------------------------------
     if frame % P.MOB_STEP == 0:
       mobEnabled = True if enabled else False
-      apply_brake = 0,
+      apply_brake = 0
 
-      idx = (frame / P.HCA_STEP) % 16
+      idx = (frame / P.MOB_STEP) % 16
       can_sends.append(self.create_braking_control(self.packer_gw, canbus.gateway, apply_brake, idx, mobEnabled))
 
     #--------------------------------------------------------------------------
