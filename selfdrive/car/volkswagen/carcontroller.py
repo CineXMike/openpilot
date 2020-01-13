@@ -8,6 +8,7 @@ VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 class CarControllerParams:
   HCA_STEP = 2                   # HCA_01 message frequency 50Hz
+  MOB_STEP = 2                   # HCA_01 message frequency 50Hz
   LDW_STEP = 10                  # LDW_02 message frequency 10Hz
   GRA_ACC_STEP = 3               # GRA_ACC_01 message frequency 33Hz
 
@@ -40,6 +41,7 @@ class CarController():
       self.create_hud_control = volkswagencan.create_mqb_hud_control
     elif networkModel == NETWORK_MODEL.PQ:
       self.create_steering_control = volkswagencan.create_pq_steering_control
+      self.create_braking_control = volkswagencan.create_pq_braking_control
       self.create_acc_buttons_control = volkswagencan.create_pq_acc_buttons_control
       self.create_hud_control = volkswagencan.create_pq_hud_control
 
@@ -131,6 +133,19 @@ class CarController():
       self.apply_steer_last = apply_steer
       idx = (frame / P.HCA_STEP) % 16
       can_sends.append(self.create_steering_control(self.packer_gw, canbus.gateway, apply_steer, idx, hcaEnabled))
+
+    #--------------------------------------------------------------------------
+    #                                                                         #
+    # Prepare PQ_MOB for sending the braking message                          #
+    #                                                                         #
+    #                                                                         #
+    #--------------------------------------------------------------------------
+    if frame % P.MOB_STEP == 0:
+      mobEnabled = True if enabled else False
+      apply_brake = 0,
+
+      idx = (frame / P.HCA_STEP) % 16
+      can_sends.append(self.create_braking_control(self.packer_gw, canbus.gateway, apply_brake, idx, mobEnabled))
 
     #--------------------------------------------------------------------------
     #                                                                         #
