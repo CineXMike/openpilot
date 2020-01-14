@@ -110,7 +110,7 @@ class CarInterface(CarInterfaceBase):
       ret.carName = "volkswagen"
       ret.safetyModel = car.CarParams.SafetyModel.volkswagen
       ret.enableCruise = True # Stock ACC still controls acceleration and braking
-      ret.openpilotLongitudinalControl = False
+      ret.openpilotLongitudinalControl = True
       ret.steerControlType = car.CarParams.SteerControlType.torque
       ret.steerLimitAlert = True # Enable UI alert when steering torque is maxed out
 
@@ -119,6 +119,22 @@ class CarInterface(CarInterfaceBase):
       ret.steerActuatorDelay = 0.05
       ret.steerMaxBP = [0.]  # m/s
       ret.steerMaxV = [1.]
+
+      # OP LONG parameters
+      ret.gasMaxBP = [0.]  # m/s
+      ret.gasMaxV = [1]  # max gas allowed
+      ret.brakeMaxBP = [5., 20.]  # m/s
+      ret.brakeMaxV = [1., 0.8]  # max brake allowed
+      ret.longitudinalTuning.deadzoneBP = [0.]
+      ret.longitudinalTuning.deadzoneV = [0.]
+      ret.longitudinalTuning.kpBP = [0., 5., 35.]
+      ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
+      ret.longitudinalTuning.kiBP = [0., 35.]
+      ret.longitudinalTuning.kiV = [0.18, 0.12]
+
+      ret.stoppingControl = True
+      ret.directAccelControl = False
+      ret.startAccel = 0.0
 
       ret.transmissionType = TRANS.automatic # FIXME: figure out a detect mechanism for PQ
       cloudlog.warning("VW PQ: detected %s transmission", ret.transmissionType)
@@ -152,16 +168,6 @@ class CarInterface(CarInterfaceBase):
     ret.steerRatioRear = 0.
 
     # No support for OP longitudinal control on Volkswagen at this time.
-    ret.gasMaxBP = [0.]
-    ret.gasMaxV = [0.]
-    ret.brakeMaxBP = [0.]
-    ret.brakeMaxV = [0.]
-    ret.longitudinalTuning.deadzoneBP = [0.]
-    ret.longitudinalTuning.deadzoneV = [0.]
-    ret.longitudinalTuning.kpBP = [0.]
-    ret.longitudinalTuning.kpV = [0.]
-    ret.longitudinalTuning.kiBP = [0.]
-    ret.longitudinalTuning.kiV = [0.]
 
     # TODO: get actual value, for now starting with reasonable value for
     # civic and scaling by mass and wheelbase
@@ -256,6 +262,8 @@ class CarInterface(CarInterfaceBase):
       events.append(create_event('espDisabled', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.parkingBrakeSet:
       events.append(create_event('parkBrake', [ET.NO_ENTRY, ET.USER_DISABLE]))
+    if self.CS.brake_warning:
+      events.append(create_event('fcw', [ET.NO_ENTRY, ET.PERMANENT]))
 
     # Vehicle health safety checks and events
     if self.CS.accFault:

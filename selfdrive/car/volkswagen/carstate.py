@@ -213,6 +213,7 @@ class CarState():
     elif networkModel == NETWORK_MODEL.PQ:
       self.shifter_values = self.can_define.dv["Getriebe_1"]['Waehlhebelposition__Getriebe_1_']
       self.update = self.update_pq
+      self.brake_warning = False
 
     self.buttonStates = BUTTON_STATES.copy()
 

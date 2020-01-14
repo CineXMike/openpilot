@@ -28,7 +28,8 @@ class CarControllerParams:
 class CarController():
   def __init__(self, canbus, car_fingerprint, networkModel):
     self.apply_steer_last = 0
-    self.apply_brake_last = -1
+    self.mobPreEnable = False
+    self.mobEnabled = False
     self.car_fingerprint = car_fingerprint
 
     # Setup detection helper. Routes commands to an appropriate CAN bus number.
@@ -142,27 +143,34 @@ class CarController():
     #                                                                         #
     #--------------------------------------------------------------------------
     if frame % P.MOB_STEP == 0:
-      mobEnabled = True if enabled else False
-      apply_brake = self.apply_brake_last
+      mobEnabled = self.mobEnabled
+      mobPreEnable = self.mobPreEnable
+      apply_brake = actuators.brake * 8190
 
+      CS.brake_warning = False
       if enabled:
-        if apply_brake == -1:
-          apply_brake = 0
-          mobPreEnable = True
+        if apply_brake > 0:
+          if not mobEnabled:
+            mobEnabled = True
+            apply_brake = 0
+          elif not mobPreEnable:
+            mobPreEnable = True
+            apply_brake = 0
+          elif apply_brake > 299:
+            apply_brake = 300
+            CS.brake_warning = True
         else:
-          mobPreEnable = True
-          if self.apply_brake_last > 300:
-            apply_brake = self.apply_brake_last
-          else:
-            apply_brake = self.apply_brake_last + 1
+          mobPreEnable = False
+          mobEnabled = False
       else:
-        apply_brake = -1
+        apply_brake = 0
         mobPreEnable = False
+        mobEnabled = False
 
       idx = (frame / P.MOB_STEP) % 16
-      self.apply_brake_last = apply_brake
-      if not enabled:
-        apply_brake = 0
+      self.mobPreEnable = mobPreEnable
+      self.mobEnabled = mobEnabled
+
       can_sends.append(self.create_braking_control(self.packer_gw, canbus.powertrain, apply_brake, idx, mobEnabled, mobPreEnable))
 
     #--------------------------------------------------------------------------
