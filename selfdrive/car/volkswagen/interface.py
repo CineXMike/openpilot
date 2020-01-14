@@ -13,6 +13,7 @@ GEAR = car.CarState.GearShifter
 
 class CANBUS:
   gateway = 0
+  powertrain = 1
   extended = 2
 
 class CarInterface(CarInterfaceBase):
