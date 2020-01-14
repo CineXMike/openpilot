@@ -151,7 +151,7 @@ class CarController():
           mobPreEnable = True
         else:
           mobPreEnable = True
-          if self.apply_brake_last > 900:
+          if self.apply_brake_last > 300:
             apply_brake = self.apply_brake_last
           else:
             apply_brake = self.apply_brake_last + 1
