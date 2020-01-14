@@ -151,7 +151,7 @@ class CarController():
           mobPreEnable = True
         else:
           mobPreEnable = True
-          apply_brake = self.apply_brake_last + 1
+          apply_brake = 120
       else:
         apply_brake = -1
         mobPreEnable = False
