@@ -263,7 +263,7 @@ class CarInterface(CarInterfaceBase):
     if self.CS.parkingBrakeSet:
       events.append(create_event('parkBrake', [ET.NO_ENTRY, ET.USER_DISABLE]))
     if self.CS.brake_warning:
-      events.append(create_event('fcw', [ET.NO_ENTRY, ET.PERMANENT]))
+      events.append(create_event('manualRestart', [ET.NO_ENTRY, ET.PERMANENT]))
 
     # Vehicle health safety checks and events
     if self.CS.accFault:
