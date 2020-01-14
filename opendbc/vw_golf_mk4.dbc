@@ -1066,8 +1066,8 @@ BO_ 644 PQ_MOB: 6 Motor_Diesel
  SG_ PQ_MOB_COUNTER : 8|4@1+ (1,0) [0|15] "" Bremse_MK25AESP
  SG_ TSK_v_Begrenzung_aktiv : 15|1@0+ (1,0) [0|1] "" XXX
  SG_ TSK_ax_Getriebe_01 : 40|8@1+ (0.048,0) [0|255] "m/s2" XXX
- SG_ MOB_Bremsstgr : 16|11@1+ (0.048851978505,0) [0|100] "Unit_PerCent" Vector__XXX
- SG_ MOB_Bremsmom : 27|13@1+ (4,0) [0|32760] "Unit_NewtoMeter" Bremse_MK25AESP
+ SG_ MOB_Bremsstgr : 16|11@1+ (0.76,0) [0|100] "Unit_PerCent" Vector__XXX
+ SG_ MOB_Bremsmom : 27|13@1+ (1,0) [0|8190] "Unit_NewtoMeter" Bremse_MK25AESP
 
 BO_ 1550 Einheiten_1: 2 XXX
  SG_ MFA_v_Einheit_02 : 0|1@1+ (1,0) [0|1] "" XXX
