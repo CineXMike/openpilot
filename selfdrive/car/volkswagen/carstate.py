@@ -399,7 +399,10 @@ class CarState():
     # FIXME: This is unfinished and not fully correct, need to improve further
     self.accFault = False  # need a detection mechanism for radar obstructed or otherwise faulted out
     self.accAvailable = bool(gw_cp.vl["GRA_neu"]['Hauptschalter'])
-    self.accEnabled = self.accAvailable
+    if gw_cp.vl["Motor_2"]['GRA_Status'] in [1, 2]:
+      self.accEnabled = True
+    else:
+      self.accEnabled = False
 
     # Update ACC setpoint. When the setpoint reads as 255, the driver has not
     # yet established an ACC setpoint, so treat it as zero.
