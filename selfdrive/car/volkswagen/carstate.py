@@ -405,7 +405,7 @@ class CarState():
 
     # Update ACC setpoint. When the setpoint reads as 255, the driver has not
     # yet established an ACC setpoint, so treat it as zero.
-    self.accSetSpeed = gw_cp.vl["Motor_2"]['Soll_Geschwindigkeit_bei_GRA_Be']
+    self.accSetSpeed = gw_cp.vl["Motor_2"]['Soll_Geschwindigkeit_bei_GRA_Be'] / 3.6
     if self.accSetSpeed == 255:
       self.accSetSpeed = 0
 
