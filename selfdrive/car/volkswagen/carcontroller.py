@@ -156,8 +156,8 @@ class CarController():
           elif not mobPreEnable:
             mobPreEnable = True
             apply_brake = 0
-          elif apply_brake > 299:
-            apply_brake = 300
+          elif apply_brake > 199:
+            apply_brake = 200
             CS.brake_warning = True
         else:
           mobPreEnable = False
