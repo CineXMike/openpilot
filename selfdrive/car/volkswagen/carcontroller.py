@@ -146,7 +146,7 @@ class CarController():
       mobEnabled = self.mobEnabled
       mobPreEnable = self.mobPreEnable
       #TODO make sure we use the full 8190 when calculating braking.
-      apply_brake = actuators.brake * 4075
+      apply_brake = actuators.brake * 200
 
       CS.brake_warning = False
       if enabled:
