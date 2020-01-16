@@ -1077,9 +1077,6 @@ BO_ 872 ACC_XX01: 8 XXX
  SG_ XX_DecelGradient : 40|8@1+ (1,0) [0|255] "" XXX
  SG_ XX_AccelGradient : 48|8@1+ (1,0) [0|255] "" XXX
 
-BO_ 1386 ACC_XX02: 8 XXX
- SG_ GRA_Set_Speed : 24|8@1+ (1,0) [0|255] "km/h" XXX
-
 BO_ 1470 LDW_1: 8 XXX
  SG_ Right_Lane_Status : 0|2@1+ (1,0) [0|3] "" XXX
  SG_ Left_Lane_Status : 2|2@1+ (1,0) [0|3] "" XXX
@@ -1098,7 +1095,7 @@ BO_ 1386 mACC_GRA_Anzeige: 8 ACC_Lidar
  SG_ ACA_Fahrerhinw : 16|1@1+ (1,0) [0|1] ""  Gateway_separat,Kombi_Highline
  SG_ ACA_AnzDisplay : 17|1@1+ (1,0) [0|1] ""  Gateway_separat,Kombi_Highline
  SG_ ACA_Zeitluecke : 18|4@1+ (1,0) [0|15] ""  Gateway_separat,Kombi_Highline
- SG_ ACA_V_Wunsch : 24|8@1+ (1,0) [0|254] "Unit_KiloMeterPerHour"  Gateway_separat,Getriebe_DQ,Kombi_Highline
+ SG_ GRA_Set_Speed : 24|8@1+ (1,0) [0|254] "Unit_KiloMeterPerHour"  Gateway_separat,Getriebe_DQ,Kombi_Highline
  SG_ ACA_kmh_mph : 32|1@1+ (1,0) [0|1] ""  Gateway_separat,Kombi_Highline
  SG_ ACA_Akustik1 : 33|1@1+ (1,0) [0|1] ""  Gateway_separat,Kombi_Highline
  SG_ ACA_Akustik2 : 34|1@1+ (1,0) [0|1] ""  Gateway_separat,Kombi_Highline
