@@ -84,19 +84,23 @@ def create_pq_braking_control(packer, bus, apply_brake, idx, brake_enabled, brak
   values["PQ_MOB_CHECKSUM"] = dat[1] ^ dat[2] ^ dat[3] ^ dat[4] ^ dat[5]
   return packer.make_can_msg("PQ_MOB", bus, values)
 
-def create_pq_acc_hud_control(packer, bus, acc_enabled, apply_brake, idx):
+def create_pq_acc_hud_control(packer, bus, acc_enabled, apply_brake, idx, ACCSetSpeed):
   if acc_enabled:
     acc_status = 2
+    cc_status = 3
   elif acc_enabled and apply_brake > 0:
     acc_status = 3
   else:
     acc_status = 0
-
+    cc_status = 2
   values = {
     "ACS_Counter": idx,
     "ACA_StaACC": acc_status,
+    "GRA_Set_Speed": ACCSetSpeed,
     "ACA_Zeitluecke": 3,
     "ACA_PrioDisp": 2,
+    "ACA_StaGRA": cc_status,
+    "ACA_Codierung": 0,
   }
 
   dat = packer.make_can_msg("mACC_GRA_Anzeige", bus, values)[2]

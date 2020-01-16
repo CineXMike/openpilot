@@ -175,7 +175,7 @@ class CarController():
       self.mobPreEnable = mobPreEnable
       self.mobEnabled = mobEnabled
       can_sends.append(self.create_braking_control(self.packer_gw, canbus.powertrain, apply_brake, idx, mobEnabled, mobPreEnable))
-      can_sends.append(self.create_acc_hud_control(self.packer_gw, canbus.powertrain, mobPreEnable, apply_brake, idx))
+      can_sends.append(self.create_acc_hud_control(self.packer_gw, canbus.powertrain, mobPreEnable, apply_brake, idx, CS.accSetSpeedKPH))
 
     #--------------------------------------------------------------------------
     #                                                                         #
