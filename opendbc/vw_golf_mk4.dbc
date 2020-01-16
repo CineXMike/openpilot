@@ -1072,11 +1072,6 @@ BO_ 644 PQ_MOB: 6 Motor_Diesel
 BO_ 1550 Einheiten_1: 2 XXX
  SG_ MFA_v_Einheit_02 : 0|1@1+ (1,0) [0|1] "" XXX
 
-BO_ 872 ACC_XX01: 8 XXX
- SG_ XX_AccelValue : 24|10@1+ (1,0) [0|255] "" XXX
- SG_ XX_DecelGradient : 40|8@1+ (1,0) [0|255] "" XXX
- SG_ XX_AccelGradient : 48|8@1+ (1,0) [0|255] "" XXX
-
 BO_ 1386 ACC_XX02: 8 XXX
  SG_ GRA_Set_Speed : 24|8@1+ (1,0) [0|255] "km/h" XXX
 
