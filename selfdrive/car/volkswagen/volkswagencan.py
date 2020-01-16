@@ -84,6 +84,26 @@ def create_pq_braking_control(packer, bus, apply_brake, idx, brake_enabled, brak
   values["PQ_MOB_CHECKSUM"] = dat[1] ^ dat[2] ^ dat[3] ^ dat[4] ^ dat[5]
   return packer.make_can_msg("PQ_MOB", bus, values)
 
+def create_pq_acc_hud_control(packer, bus, acc_enabled, apply_brake, idx):
+  if acc_enabled:
+    acc_status = 2
+  elif acc_enabled and apply_brake > 0:
+    acc_status = 1
+  else:
+    acc_status = 0
+
+  values = {
+    "ACS_Counter": idx,
+    "ACS_Sta_ADR": acc_status,
+    "ACS_Typ_ACC": 1,
+    "ACS_FreigSollB": 1,
+    "ACS_Fehler": 1,
+  }
+
+  dat = packer.make_can_msg("mACC_System", bus, values)[2]
+  values["ACS_Checksum"] = dat[1] ^ dat[2] ^ dat[3] ^ dat[4] ^ dat[5] ^ dat[6] ^ dat[7]
+  return packer.make_can_msg("mACC_System", bus, values)
+
 def create_pq_hud_control(packer, bus, hca_enabled, steering_pressed, hud_alert, leftLaneVisible, rightLaneVisible):
   if hca_enabled:
     leftlanehud = 3 if leftLaneVisible else 1

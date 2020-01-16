@@ -1091,6 +1091,22 @@ BO_ 1470 LDW_1: 8 XXX
  SG_ XX_DLCORTLC1 : 24|8@1+ (1,0) [0|255] "" XXX
  SG_ XX_DLCORTLC2 : 32|8@1+ (1,0) [0|255] "" XXX
 
+BO_ 872 mACC_System: 8 ACC_Lidar
+ SG_ ACS_Checksum : 0|8@1+ (1,0) [0|255] ""  Getriebe_DQ,Motor_Diesel,Motor_Otto
+ SG_ ACS_Counter : 8|4@1+ (1,0) [0|15] ""  Getriebe_DQ,Motor_Diesel,Motor_Otto
+ SG_ ACS_Sta_ADR : 12|2@1+ (1,0) [0|3] ""  Getriebe_DQ,Motor_Diesel,Motor_Otto
+ SG_ ACS_ADR_Schub : 14|1@1+ (1,0) [0|1] ""  Getriebe_DQ,Motor_Diesel,Motor_Otto
+ SG_ ACS_Schubabsch : 15|1@1+ (1,0) [0|1] ""  Getriebe_DQ,Motor_Diesel,Motor_Otto
+ SG_ ACS_StSt_Info : 16|2@1+ (1,0) [0|3] ""  Motor_Diesel,Motor_Otto
+ SG_ ACS_MomEingriff : 18|1@1+ (1,0) [0|1] ""  Motor_Diesel,Motor_Otto
+ SG_ ACS_Typ_ACC : 19|2@1+ (1,0) [0|3] ""  Motor_Diesel,Motor_Otto
+ SG_ ACS_FreigSollB : 23|1@1+ (1,0) [0|1] ""  Motor_Diesel,Motor_Otto
+ SG_ ACS_Sollbeschl : 24|11@1+ (0.005,-7.22) [-7.22|3.005] "Unit_MeterPerSeconSquar"  Getriebe_DQ,Motor_Diesel,Motor_Otto
+ SG_ ACS_Anhaltewunsch : 38|1@1+ (1,0) [0|1] ""  Motor_Diesel,Motor_Otto
+ SG_ ACS_Fehler : 39|1@1+ (1,0) [0|1] ""  BCM_Gateway,Gateway_separat
+ SG_ ACS_zul_Regelabw : 40|8@1+ (0.005,0) [0|1.265] "Unit_MeterPerSeconSquar"  Motor_Diesel,Motor_Otto
+ SG_ ACS_max_AendGrad : 48|8@1+ (0.02,0) [0.02|5.06] "Unit_MeterPerSeconSquar"  Motor_Diesel,Motor_Otto
+
 CM_ SG_ 210 LM_Offset "Actually centiNewton-meters for ease of calculation without FP math in Panda";
 CM_ SG_ 210 Vib_Amp "Steering wheel haptic, amplitude";
 CM_ SG_ 210 Vib_Freq "Steering wheel haptic, frequency";

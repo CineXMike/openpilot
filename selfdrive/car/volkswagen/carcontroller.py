@@ -46,6 +46,7 @@ class CarController():
       self.create_braking_control = volkswagencan.create_pq_braking_control
       self.create_acc_buttons_control = volkswagencan.create_pq_acc_buttons_control
       self.create_hud_control = volkswagencan.create_pq_hud_control
+      self.create_acc_hud_control = volkswagencan.create_pq_acc_hud_control
 
     self.hcaSameTorqueCount = 0
     self.hcaEnabledFrameCount = 0
@@ -174,6 +175,7 @@ class CarController():
       self.mobPreEnable = mobPreEnable
       self.mobEnabled = mobEnabled
       can_sends.append(self.create_braking_control(self.packer_gw, canbus.powertrain, apply_brake, idx, mobEnabled, mobPreEnable))
+      can_sends.append(self.create_acc_hud_control(self.packer_gw, canbus.powertrain, mobPreEnable, apply_brake, idx))
 
     #--------------------------------------------------------------------------
     #                                                                         #
@@ -195,7 +197,6 @@ class CarController():
 
 
       can_sends.append(self.create_hud_control(self.packer_gw, canbus.gateway, hcaEnabled, CS.steeringPressed, hud_alert, leftLaneVisible, rightLaneVisible))
-
     #--------------------------------------------------------------------------
     #                                                                         #
     # Prepare ACC control messages with button press events.                  #
